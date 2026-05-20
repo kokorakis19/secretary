@@ -574,7 +574,6 @@ function switchTab(tab) {
 // ════════════════════════════════════
 async function callBackend(payload) {
   if (!S.backendUrl) throw new Error('Backend URL δεν έχει οριστεί');
-  // Χρησιμοποιούμε GET με query parameters για CORS compatibility
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(payload)) {
     if (value !== undefined && value !== null) {
@@ -582,9 +581,20 @@ async function callBackend(payload) {
     }
   }
   const url = S.backendUrl + '?' + params.toString();
-  const res = await fetch(url, { method: 'GET' });
+  
+  // Apps Script redirect handling - χρειάζεται manual redirect follow
+  const res = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    headers: { 'Accept': 'application/json' }
+  });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch(e) {
+    throw new Error('Μη έγκυρη απάντηση: ' + text.substring(0, 100));
+  }
 }
 
 async function checkBackend() {
